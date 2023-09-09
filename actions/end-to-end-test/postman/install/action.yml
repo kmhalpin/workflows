@@ -1,5 +1,10 @@
 name: Postman Installer
 description: Postman CLI installer
+inputs:
+  postman-api-key:
+    type: string
+    required: true
+    description: Postman API key
 
 runs:
   using: composite
@@ -9,5 +14,5 @@ runs:
         curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
       shell: bash
     - name: Login to Postman CLI
-      run: postman login --with-api-key ${{ secrets.postman-api-key }}
+      run: postman login --with-api-key ${{ inputs.postman-api-key }}
       shell: bash
