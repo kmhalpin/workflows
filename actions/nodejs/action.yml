@@ -1,5 +1,5 @@
-name: Node.js Integration Test Action
-description: Integration test on node.js source code
+name: Setup Node.js
+description: Setup node.js project
 inputs:
   nodejs_version:
     type: string
@@ -17,5 +17,3 @@ runs:
         cache: npm
     - name: Install dependencies
       run: npm ci
-    - name: Run integration test
-      run: npm run test int

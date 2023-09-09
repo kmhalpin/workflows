@@ -1,0 +1,21 @@
+name: Newman End To End Test Action
+description: End to end test using newman
+
+runs:
+  using: composite
+  steps:
+    - name: Run Newman        
+      uses: docker://postman/newman:latest
+      with:
+        args: |
+          run "${{ github.workspace }}/.github/postman/collections/Forum API V2 Test.json" \
+          --reporters cli,junit \
+          --reporter-junit-export .github/postman/collections/results.xml
+    - name: Report Newman
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Postman end to end tests
+        path: .github/postman/collections/results.xml
+        reporter: java-junit
+        fail-on-error: true

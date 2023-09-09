@@ -23,11 +23,14 @@ on:
         default: '[]'
         required: false
         description: List of service images used for integration test (postgresql / redis)
-      end_to_end_test_type:
+      e2e_test_type:
+        type: string
+        required: true
+        description: End to end test type
+      postman_collection_path:
         type: string
         required: false
-        default: postman
-        description: End to end test type
+        description: Used by Postman / Newman end to end test
       docker_image_name:
         type: string
         required: false
@@ -48,19 +51,33 @@ jobs:
           PROJECT_ENVIRONMENT: ${{ inputs.project_environment }}
           PROJECT_LANGUAGE: ${{ inputs.project_language }}
           PROJECT_LANGUAGE_VERSION: ${{ inputs.project_language_version }}
+          TEST_SERVICES: ${{ inputs.test_services }}
+          E2E_TEST_TYPE: ${{ inputs.e2e_test_type }}
+          POSTMAN_COLLECTION_PATH: ${{ inputs.postman_collection_path }}
           DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
         run: |
           echo === GENERAL INPUT ===
-          echo project name: $PROJECT_NAME
-          echo project environment: $PROJECT_ENVIRONMENT
-          echo project language: $PROJECT_LANGUAGE
-          echo project language version: $PROJECT_LANGUAGE_VERSION
+          echo "project name\t\t: $PROJECT_NAME"
+          echo "project environment\t: $PROJECT_ENVIRONMENT"
+          echo "project language\t: $PROJECT_LANGUAGE"
+          echo "project language ver\t: $PROJECT_LANGUAGE_VERSION"
+          echo "test services\t\t: $TEST_SERVICES"
+          echo "end to end test type\t: $E2E_TEST_TYPE"
+
+          if [[ $E2E_TEST_TYPE == 'postman' || $E2E_TEST_TYPE == 'newman' ]]; then
+            echo === POSTMAN / NEWMAN INPUT ===
+            echo "postman collection path\t: $POSTMAN_COLLECTION_PATH"
+            if [[ -z $POSTMAN_COLLECTION_PATH ]]; then
+              echo ::error title=Validation error::Collection path empty
+              exit 1
+            fi
+          fi
 
           if [[ -n $DOCKER_IMAGE_NAME || -n $DOCKER_IMAGE_TAG ]]; then
             echo === DOCKER INPUT ===
-            echo docker image name: $DOCKER_IMAGE_NAME
-            echo docker image tag: $DOCKER_IMAGE_TAG
+            echo "docker image name\t: $DOCKER_IMAGE_NAME"
+            echo "docker image tag\t: $DOCKER_IMAGE_TAG"
             WITH_DOCKER=true
             echo "WITH_DOCKER=$WITH_DOCKER" >> "$GITHUB_OUTPUT"
           fi
@@ -81,10 +98,6 @@ jobs:
         uses: kmhalpin/workflows/actions/static-analysis/nodejs@main
         with:
           nodejs_version: ${{ inputs.project_language_version }}
-      - if: ${{ inputs.project_language == 'php' }}
-        uses: kmhalpin/workflows/actions/static-analysis/php@main
-        with:
-          php_version: ${{ inputs.project_language_version }}
 
   unit_test:
     name: Unit Test
@@ -117,18 +130,71 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - if: ${{ inputs.project_language == 'nodejs' }}
-        uses: kmhalpin/workflows/actions/integration-test/nodejs@main
-        with:
-          nodejs_version: ${{ inputs.project_language_version }}
+    - uses: actions/checkout@v4
+    - if: ${{ inputs.project_language == 'nodejs' }}
+      uses: kmhalpin/workflows/actions/nodejs@main
+      with:
+        nodejs_version: ${{ inputs.project_language_version }}
+    - if: ${{ inputs.project_language == 'nodejs' }}
+      name: Run integration test
+      run: |
+        npm run migrate up
+        npm run test int
+      env:
+        PGHOST: localhost
+        PGUSER: postgres
+        PGDATABASE: postgres
+        PGPASSWORD: postgres
+        PGPORT: 5432
+        REDISHOST: localhost
+        REDISPORT: 6379
 
   end_to_end_test:
     name: End To End Test
     needs: integration_test
     runs-on: ubuntu-latest
+    services:
+      postgresql:
+        image: ${{ contains(fromJSON(inputs.test_services), 'postgres') && 'postgres' || '' }}
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: |-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: ${{ contains(fromJSON(inputs.test_services), 'redis') && 'redis' || '' }}
+        ports:
+          - 6379:6379
     steps:
-      - if: ${{ inputs.end_to_end_test_type == 'postman' }}
+      - uses: actions/checkout@v4
+      - if: ${{ inputs.project_language == 'nodejs' }}
+        uses: kmhalpin/workflows/actions/nodejs@main
+        with:
+          nodejs_version: ${{ inputs.project_language_version }}
+      - if: ${{ inputs.e2e_test_type == 'postman' }}
+        uses: kmhalpin/workflows/actions/end-to-end-test/postman/install@main
+      - if: ${{ (inputs.e2e_test_type == 'postman' || inputs.e2e_test_type == 'newman') && inputs.project_language == 'nodejs' }}
+        name: Run app
+        run: |
+          npm run migrate up
+          nohup npm start &
+          sleep 60
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGDATABASE: postgres
+          PGPASSWORD: postgres
+          PGPORT: 5432
+          REDISHOST: localhost
+          REDISPORT: 6379
+      - if: ${{ inputs.e2e_test_type == 'postman' }}
         uses: kmhalpin/workflows/actions/end-to-end-test/postman@main
+      - if: ${{ inputs.e2e_test_type == 'newman' }}
+        uses: kmhalpin/workflows/actions/end-to-end-test/newman@main
 
   container_image_creation:
     name: Build And Push Container Image

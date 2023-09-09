@@ -10,12 +10,8 @@ runs:
   using: composite
   steps:
     - uses: actions/checkout@v4
-    - name: Setup Node.js ${{ inputs.nodejs_version }}
-      uses: actions/setup-node@v3
+    - uses: kmhalpin/workflows/actions/nodejs@main
       with:
-        node-version: ${{ inputs.nodejs_version }}
-        cache: npm
-    - name: Install dependencies
-      run: npm ci
+        nodejs_version: ${{ inputs.nodejs_version }}
     - name: Run static analysis
       run: npm run analyse
