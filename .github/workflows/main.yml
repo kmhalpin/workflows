@@ -86,8 +86,8 @@ jobs:
             echo ::error title=Validation error::Docker input incomplete
             exit 1
           fi
-        outputs:
-          with_docker: ${{ steps.validate.outputs.WITH_DOCKER }}
+    outputs:
+      with-docker: ${{ steps.validate.outputs.WITH_DOCKER }}
 
   static_analysis:
     name: Static Analysis
@@ -203,7 +203,25 @@ jobs:
   container_image_creation:
     name: Build And Push Container Image
     needs: [validate_inputs, end_to_end_test]
-    if: needs.validate_inputs.outputs.with_docker
+    if: needs.validate_inputs.outputs.with-docker
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-region: ap-southeast-1
+          role-to-assume: arn:aws:iam::024538648017:role/github-aws-oidc-Role-18XJ1TB4PP64X
+      - name: Retrieve secrets from aws secret manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          secret-ids: |
+            SECRET,github_workflows
+          parse-json-secrets: true
+      - id: docker
         uses: kmhalpin/workflows/actions/docker@main
+        with:
+          docker_image_name: ${{ inputs.docker_image_name }}
+          docker_image_tag: ${{ inputs.docker_image_tag }}
