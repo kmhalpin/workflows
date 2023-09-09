@@ -112,7 +112,7 @@ jobs:
 
   unit_test:
     name: Unit Test
-    needs: static_analysis
+    needs: validate_inputs
     runs-on: ubuntu-latest
     steps:
       - if: ${{ inputs.project_language == 'nodejs' }}
@@ -122,7 +122,7 @@ jobs:
 
   integration_test:
     name: Integration Test
-    needs: unit_test
+    needs: validate_inputs
     runs-on: ubuntu-latest
     services:
       postgresql:
@@ -159,7 +159,7 @@ jobs:
 
   end_to_end_test:
     name: End To End Test
-    needs: integration_test
+    needs: validate_inputs
     runs-on: ubuntu-latest
     services:
       postgresql:
@@ -187,7 +187,7 @@ jobs:
         run: |
           npm run migrate up
           nohup npm start &
-          sleep 20
+          sleep 15
         env:
           HOST: localhost
           PORT: 5000
@@ -213,7 +213,7 @@ jobs:
 
   container_image_creation:
     name: Build And Push Container Image
-    needs: [validate_inputs, end_to_end_test]
+    needs: [validate_inputs, static_analysis, unit_test, integration_test, end_to_end_test]
     if: needs.validate_inputs.outputs.with-docker
     runs-on: ubuntu-latest
     permissions:
