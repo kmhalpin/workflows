@@ -39,6 +39,11 @@ on:
         type: string
         required: false
         description: Docker container image tag
+    secrets:
+      postman-api-key:
+        description: Token required for postman end to end test
+        required: false
+
 jobs:
   validate_inputs:
     name: Validate Inputs
