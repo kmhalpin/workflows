@@ -5,7 +5,7 @@ on:
       project_name:
         type: string
         required: true
-        description: Project name dispatched the workflow
+        description: Workflow caller project name
       project_environment:
         type: string
         required: true
@@ -193,8 +193,12 @@ jobs:
           REDISPORT: 6379
       - if: ${{ inputs.e2e_test_type == 'postman' }}
         uses: kmhalpin/workflows/actions/end-to-end-test/postman@main
+        with:
+          collection_path: ${{ inputs.postman_collection_path }}
       - if: ${{ inputs.e2e_test_type == 'newman' }}
         uses: kmhalpin/workflows/actions/end-to-end-test/newman@main
+        with:
+          collection_path: ${{ inputs.postman_collection_path }}
 
   container_image_creation:
     name: Build And Push Container Image

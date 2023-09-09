@@ -1,11 +1,16 @@
 name: Postman End To End Test Action
 description: End to end test using postman
-
+inputs:
+  collection_path:
+    type: string
+    required: true
+    description: Postman collection file path
+# postman collection run "${{ github.workspace }}/.github/postman/collections/Forum API V2 Test.json" \
 runs:
   using: composite
   steps:
     - name: Run API tests
       run: |
-        postman collection run "${{ github.workspace }}/.github/postman/collections/Forum API V2 Test.json" \
+        postman collection run "${{ github.workspace }}/${{ inputs.collection_path }}" \
         -e "13016039-d6828cf2-feea-4ce0-bab1-76a267df734f" \
         --integration-id "147890-${{ github.run_id }}"
