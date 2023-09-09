@@ -9,11 +9,13 @@ inputs:
 runs:
   using: composite
   steps:
+    - run: touch results.xml
+      shell: bash
     - name: Run Newman        
       uses: docker://postman/newman:latest
       with:
         args: |
-          run "${{ github.workspace }}/${{ inputs.collection_path }}" \
+          run "${{ inputs.collection_path }}" \
           --reporters cli,junit \
           --reporter-junit-export results.xml
     - name: Report Newman

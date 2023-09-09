@@ -181,7 +181,7 @@ jobs:
         run: |
           npm run migrate up
           nohup npm start &
-          sleep 60
+          sleep 20
         env:
           PGHOST: localhost
           PGUSER: postgres
