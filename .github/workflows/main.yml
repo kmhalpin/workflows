@@ -143,6 +143,8 @@ jobs:
         PGPORT: 5432
         REDISHOST: localhost
         REDISPORT: 6379
+        ACCESS_TOKEN_KEY: test1
+        REFRESH_TOKEN_KEY: test2
 
   end_to_end_test:
     name: End To End Test
@@ -153,11 +155,6 @@ jobs:
         image: ${{ contains(fromJSON(inputs.test_services), 'postgres') && 'postgres' || '' }}
         env:
           POSTGRES_PASSWORD: postgres
-        options: |-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
         ports:
           - 5432:5432
       redis:
@@ -186,6 +183,8 @@ jobs:
           PGPORT: 5432
           REDISHOST: localhost
           REDISPORT: 6379
+          ACCESS_TOKEN_KEY: test1
+          REFRESH_TOKEN_KEY: test2
       - if: ${{ inputs.e2e_test_type == 'postman' }}
         uses: kmhalpin/workflows/actions/end-to-end-test/postman@main
         with:
