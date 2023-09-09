@@ -15,3 +15,4 @@ runs:
         nodejs_version: ${{ inputs.nodejs_version }}
     - name: Run unit test
       run: npm run test unit
+      shell: bash

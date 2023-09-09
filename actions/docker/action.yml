@@ -34,3 +34,4 @@ runs:
     - id: out_docker_image
       run: |
         echo "name=${{ inputs.docker_image_name }}:${{ inputs.docker_image_tag }}" >> "$GITHUB_OUTPUT"
+      shell: bash

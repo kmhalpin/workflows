@@ -14,3 +14,4 @@ runs:
         postman collection run "${{ github.workspace }}/${{ inputs.collection_path }}" \
         -e "13016039-d6828cf2-feea-4ce0-bab1-76a267df734f" \
         --integration-id "147890-${{ github.run_id }}"
+      shell: bash
