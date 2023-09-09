@@ -1,0 +1,139 @@
+name: Shared Workflows
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        type: string
+        required: true
+        description: Project name dispatched the workflow
+      project_environment:
+        type: string
+        required: true
+        description: Project workflow environment
+      project_language:
+        type: string
+        required: true
+        description: Project language
+      project_language_version:
+        type: string
+        required: true
+        description: Project language version
+      test_services:
+        type: string
+        default: '[]'
+        required: false
+        description: List of service images used for integration test (postgresql / redis)
+      end_to_end_test_type:
+        type: string
+        required: false
+        default: postman
+        description: End to end test type
+      docker_image_name:
+        type: string
+        required: false
+        description: Docker container image name
+      docker_image_tag:
+        type: string
+        required: false
+        description: Docker container image tag
+jobs:
+  validate_inputs:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - id: validate
+        name: Validate inputs
+        env:
+          PROJECT_NAME: ${{ inputs.project_name }}
+          PROJECT_ENVIRONMENT: ${{ inputs.project_environment }}
+          PROJECT_LANGUAGE: ${{ inputs.project_language }}
+          PROJECT_LANGUAGE_VERSION: ${{ inputs.project_language_version }}
+          DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
+          DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
+        run: |
+          echo === GENERAL INPUT ===
+          echo project name: $PROJECT_NAME
+          echo project environment: $PROJECT_ENVIRONMENT
+          echo project language: $PROJECT_LANGUAGE
+          echo project language version: $PROJECT_LANGUAGE_VERSION
+
+          if [[ -n $DOCKER_IMAGE_NAME || -n $DOCKER_IMAGE_TAG ]]; then
+            echo === DOCKER INPUT ===
+            echo docker image name: $DOCKER_IMAGE_NAME
+            echo docker image tag: $DOCKER_IMAGE_TAG
+            WITH_DOCKER=true
+            echo "WITH_DOCKER=$WITH_DOCKER" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ -n $WITH_DOCKER && ( -z $DOCKER_IMAGE_NAME || -z $DOCKER_IMAGE_TAG ) ]]; then
+            echo ::error title=Validation error::Docker input incomplete
+            exit 1
+          fi
+        outputs:
+          with_docker: ${{ steps.validate.outputs.WITH_DOCKER }}
+
+  static_analysis:
+    name: Static Analysis
+    needs: validate_inputs
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ inputs.project_language == 'nodejs' }}
+        uses: kmhalpin/workflows/actions/static-analysis/nodejs@main
+        with:
+          nodejs_version: ${{ inputs.project_language_version }}
+      - if: ${{ inputs.project_language == 'php' }}
+        uses: kmhalpin/workflows/actions/static-analysis/php@main
+        with:
+          php_version: ${{ inputs.project_language_version }}
+
+  unit_test:
+    name: Unit Test
+    needs: static_analysis
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ inputs.project_language == 'nodejs' }}
+        uses: kmhalpin/workflows/actions/unit-test/nodejs@main
+        with:
+          nodejs_version: ${{ inputs.project_language_version }}
+
+  integration_test:
+    name: Integration Test
+    needs: unit_test
+    runs-on: ubuntu-latest
+    services:
+      postgresql:
+        image: ${{ contains(fromJSON(inputs.test_services), 'postgres') && 'postgres' || '' }}
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: |-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: ${{ contains(fromJSON(inputs.test_services), 'redis') && 'redis' || '' }}
+        ports:
+          - 6379:6379
+    steps:
+      - if: ${{ inputs.project_language == 'nodejs' }}
+        uses: kmhalpin/workflows/actions/integration-test/nodejs@main
+        with:
+          nodejs_version: ${{ inputs.project_language_version }}
+
+  end_to_end_test:
+    name: End To End Test
+    needs: integration_test
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ inputs.end_to_end_test_type == 'postman' }}
+        uses: kmhalpin/workflows/actions/end-to-end-test/postman@main
+
+  container_image_creation:
+    name: Build And Push Container Image
+    needs: [validate_inputs, end_to_end_test]
+    if: needs.validate_inputs.outputs.with_docker
+    runs-on: ubuntu-latest
+    steps:
+        uses: kmhalpin/workflows/actions/docker@main

@@ -1,0 +1,35 @@
+name: Postman End To End Test Action
+description: End to end test using postman
+inputs:
+  nodejs_version:
+    type: string
+    required: true
+    description: Node.js version
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js ${{ inputs.nodejs_version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.nodejs_version }}
+        cache: npm
+    - name: Install dependencies
+      run: npm ci
+    - name: Run newman
+      uses: docker://postman/newman:latest
+      with:
+        args: run postman/collection.json --reporters cli,junit --reporter-junit-export .github/results.xml
+    - name: Install postman
+      run: 
+    - name: Run postman collection
+      run: 
+    - name: Report postman
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Postman end to end tests
+        path: .github/results.xml
+        reporter: java-junit
+        fail-on-error: true

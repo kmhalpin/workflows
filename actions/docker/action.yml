@@ -1,0 +1,21 @@
+name: Docker Container Action
+description: Build docker container image and push to registry
+inputs:
+  docker_image_name:
+    type: string
+    required: true
+    description: Docker container image name
+  docker_image_tag:
+    type: string
+    required: true
+    description: Docker container image tag
+outputs:
+  random-number:
+    description: "Random number"
+    value: ${{ steps.random-number-generator.outputs.random-number }}
+
+runs:
+  using: composite
+  steps:
+    - id:
+      uses:
