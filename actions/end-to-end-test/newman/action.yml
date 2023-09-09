@@ -5,19 +5,22 @@ inputs:
     type: string
     required: true
     description: Postman collection file path
+  environment_path:
+    type: string
+    required: true
+    description: Postman environment file path
 
 runs:
   using: composite
   steps:
     - run: touch results.xml
       shell: bash
+    - name: Install Newman
+      run: npm install -g newman
+      shell: bash
     - name: Run Newman        
-      uses: docker://postman/newman:latest
-      with:
-        args: |
-          run "${{ inputs.collection_path }}" \
-          --reporters cli,junit \
-          --reporter-junit-export results.xml
+      run: newman run "${{ inputs.collection_path }}" -e "${{ inputs.environment_path }}" --reporters cli,junit --reporter-junit-export results.xml
+      shell: bash
     - name: Report Newman
       uses: dorny/test-reporter@v1
       if: always()
