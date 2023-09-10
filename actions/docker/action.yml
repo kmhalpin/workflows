@@ -41,5 +41,5 @@ runs:
           ${{ inputs.docker_image_name }}:${{ inputs.docker_image_tag }}
     - id: out_docker_image
       run: |
-        echo "name=${{ inputs.docker_image_name }}:${{ inputs.docker_image_tag }}" >> "$GITHUB_OUTPUT"
+        echo "name=index.docker.io/${{ inputs.docker_image_name }}:${{ inputs.docker_image_tag }}" >> "$GITHUB_OUTPUT"
       shell: bash
