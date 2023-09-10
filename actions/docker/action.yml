@@ -9,7 +9,7 @@ inputs:
     type: string
     required: true
     description: Docker container image tag
-  secret_dockerhub_username:
+  dockerhub_username:
     type: string
     required: true
     description: Docker hub username
@@ -28,7 +28,7 @@ runs:
     - uses: actions/checkout@v3
     - uses: docker/login-action@v2
       with:
-        username: ${{ inputs.secret_dockerhub_username }}
+        username: ${{ inputs.dockerhub_username }}
         password: ${{ inputs.secret_dockerhub_token }}
     - name: Build and push worker
       uses: docker/build-push-action@v4

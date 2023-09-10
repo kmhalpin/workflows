@@ -43,6 +43,10 @@ on:
         type: string
         required: false
         description: Docker container image tag
+      dockerhub_username:
+        type: string
+        required: false
+        description: Docker hub username
       aws_ecs_task_definition_file_path:
         type: string
         required: false
@@ -248,7 +252,7 @@ jobs:
         with:
           docker_image_name: ${{ inputs.docker_image_name }}
           docker_image_tag: ${{ inputs.docker_image_tag }}
-          secret_dockerhub_username: ${{ env.SECRET_DOCKERHUB_USERNAME }}
+          dockerhub_username: ${{ inputs.dockerhub_username }}
           secret_dockerhub_token: ${{ env.SECRET_DOCKERHUB_TOKEN }}
     outputs:
       docker-image: ${{ steps.docker.outputs.docker-image-name }}
